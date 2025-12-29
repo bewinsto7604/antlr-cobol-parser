@@ -1,0 +1,476 @@
+# Task: Generate Consolidated Business Rules Report in Natural Language
+
+You are a business analyst expert in healthcare Medicaid systems. Your task is to create a **comprehensive, consolidated business rules report** in natural language format that combines:
+
+1. **NJ2BE067.cbl override and fallback rules** (5 rules)
+2. **COSMATRX base rules** (109 rules)
+
+The final output should match the format of COSMATRX-integrated-report.md - simple, clean natural language rules.
+
+---
+
+## Input 1: NJ2BE067 Rules Extraction
+
+# NJ2BE067 Business Rules Report
+
+**Rule 001** - COS code `94` (Garden State Health Plan - GSHP) is assigned when GSHP-RELATED flag is `1` (GSHP Encounter Claim), `2` (GSHP Referral In-Plan Capitated), `5` (GSHP Capitated Claim), `6` (GSHP Referral Inpatient), `7` (GSHP PCM Capitated Claim), `8` (GSHP Referral In-Plan Non-Capitated), `9` (GSHP In-Plan Non-Capitated).
+
+**Rule 002** - COS code `37` (Managed Care) is assigned when Provider Type is `37` (HMO/Managed Care) OR Media Code is `7` (Encounters Fee for Service).
+
+**Rule 003** - COS code `60` (Laboratory) is assigned when Procedure Code follows lab format (first 4 characters numeric and last character alphabetic) AND claim is NOT Claim Type `03` (Outpatient Hospital) AND NOT Medicare Part A Outpatient Hospital Crossover (14/03).
+
+**COSMATRX Traversal** - After checking the above override rules, NJ2BE067 calls the COSMATRX matrix (Lines 95-115) to evaluate all 109 base COSMATRX rules. The program performs matrix traversal by:
+
+1. Evaluating claim data against matrix conditions (Claim Type, Provider Type, Provider Specialty, Procedure Codes, etc.)
+2. Applying conditional exclusions for procedure-based rules (excludes Inpatient, Home Health, and Outpatient Lab procedures)
+3. Handling Medicare Part A (14/XX) and Part B (15/XX) crossovers by substituting actual Medicare claim types
+4. Returning the matched COS code or HIGH-VALUES if no match found
+
+**Note**: All 109 COSMATRX base rules are called via matrix traversal. See COSMATRX-integrated-report.md for the complete list of base rules.
+
+**Rule 004** - COS code `08C` (Other Clinic) is assigned when no COSMATRX match is found AND Claim Type is `18` (Independent Clinic) OR Medicare Part B Independent Clinic Crossover (15/18).
+
+**Rule 005** - COS code `99` (Other) is assigned when no COSMATRX match is found and the claim does not qualify for COS `08C`.
+
+---
+
+## Processing Flow
+
+1. **Override Rules (001-003)**: Check GSHP, Managed Care, Lab format procedures
+   - If matched: Assign COS code and EXIT
+
+2. **COSMATRX Traversal**: Call COSMATRX matrix to evaluate 109 base rules
+   - Apply conditional exclusions for procedure-based rules
+   - Handle Medicare crossovers (14/XX, 15/XX)
+   - Return matched COS code or no match
+
+3. **Fallback Rules (004-005)**: Apply defaults when no COSMATRX match
+   - COS 08C for Claim Type 18
+   - COS 99 for all others
+
+---
+
+## Medicare Crossover Handling
+
+NJ2BE067 handles Medicare crossover claims by substituting the actual Medicare claim type (Lines 240-252):
+
+- **Part A (Claim Type 14)**: Substitutes TT-A-MCARE-CLM-TYPE values (01, 02, 03)
+- **Part B (Claim Type 15)**: Substitutes TT-B-MCARE-CLM-TYPE values (04, 05, 07-10, 16-19, 21-23)
+
+Example: A claim with Claim Type 15 and TT-B-MCARE-CLM-TYPE = 18 is evaluated as Claim Type 18 (Independent Clinic) for COSMATRX rules.
+
+---
+
+## Conditional Exclusions
+
+Procedure-based COSMATRX rules (PROCEDURE-CODE, PROCEDURE-AND-MODS, PROCEDURE-MOD-ONLY) are excluded when (Lines 330-376):
+
+- Claim Type is `01` (Inpatient Hospital) OR
+- Claim Type is `06` (Home Health) OR
+- Medicare Part A Inpatient Hospital Crossover (14/01) OR
+- Outpatient Lab Procedure flag is set
+
+---
+
+## Summary
+
+- **Override Rules**: 3 (Rules 001-003)
+- **COSMATRX Base Rules Called**: 109 (via matrix traversal)
+- **Fallback Rules**: 2 (Rules 004-005)
+- **Total NJ2BE067-Specific Rules**: 5
+- **Total Rules Including COSMATRX**: 114
+
+
+
+---
+
+## Input 2: COSMATRX Base Rules (109 Rules)
+
+# COS Business Rules Report
+
+**Rule 001** - COS code 01A (INPAT GENL HOSP) is assigned when Claim Type is `01` and Provider Type is `60`.
+
+**Rule 002** - COS code 01B (INPAT OTHER HOSP) is assigned when Claim Type is `01` and Provider Type is `65`.
+
+**Rule 003** - COS code 02 (RES TREATMNT CNTR) is assigned when Provider Type is `59` and Program Status is NOT `641`.
+
+**Rule 004** - COS code 03A (INPAT MH - GVNMNT) is assigned when Provider Type is `64`, `69` and Claim Type is `01`, `02` and Facility Control Code is `4`, `5`, `6`, `9`.
+
+**Rule 005** - COS code 03C (INPAT MH - OTHER) is assigned when Provider Type is `64`, `69` and Claim Type is `01`, `02` and Facility Control Code is NOT `4`, `5`, `6`, `9`.
+
+**Rule 006** - COS code 04A (OUTPAT / EPSDT) is assigned when Claim Type is `03` and Clinic Code is NOT `27`.
+
+**Rule 007** - COS code 04B (OUTPAT - CLINC 27) is assigned when Claim Type is `03` and Clinic Code is `27`.
+
+**Rule 008** - COS code 04C (EPSDT) is assigned when Provider Type is `60`, `65` and Claim Type is `13`.
+
+**Rule 009** - COS code 05 (ICF-MR) is assigned when Provider Type is `88`.
+
+**Rule 010** - COS code 06 (TARGTD CASE MGMT) is assigned when Provider Specialty is `819`, `822`, `824`.
+
+**Rule 011** - COS code 06 (TARGTD CASE MGMT) is assigned when Provider Specialty is `813` and Procedure Code with Modifiers is NOT `T1017` with modifier `TJ`.
+
+**Rule 012** - COS code 06 (TARGTD CASE MGMT) is assigned when Procedure Code with Modifiers is `H0006`, `T2022` with modifier `HA`, `HA` and Procedure Modifier Only is NOT `22`.
+
+**Rule 013** - COS code 07 (NURSING FACILITY) is assigned when Provider Type is `80`.
+
+**Rule 014** - COS code 08A (COMM HLTH CLINIC) is assigned when Provider Specialty is `950` and Provider Type is `24` and Claim Type is `13`, `18`.
+
+**Rule 015** - COS code 08A (COMM HLTH CLINIC) is assigned when Procedure Code is `90792`, `90863`, `90887`, `96152`, `96158`, `96159`, `H0007`, `H0015`, `H0018` and Procedure Modifier Only is `HA`.
+
+**Rule 016** - COS code 08A (COMM HLTH CLINIC) is assigned when Procedure Code with Modifiers is `90832`, `90837`, `90846`, `90847` with modifier `HA`, `HA`, `HA`, `HA` and Procedure Modifier Only is `22`.
+
+**Rule 017** - COS code 08A (COMM HLTH CLINIC) is assigned when Procedure Code with Modifiers is `90791` with modifier `AJ` and Procedure Modifier Only is NOT `HF`, `HE`.
+
+**Rule 018** - COS code 08B (MNTL HLTH CLINIC) is assigned when Provider Specialty is `920`, `940` and Provider Type is `24` and Claim Type is `18` and Procedure Modifier Only is `HH`.
+
+**Rule 019** - COS code 08B (MNTL HLTH CLINIC) is assigned when Provider Specialty is `940` and Provider Type is `24` and Claim Type is `13`, `18`.
+
+**Rule 020** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code with Modifiers is `90791`, `H0010`, `S9125`, `H2015` with modifier `HA`, `HA`, `HA`, `HM`.
+
+**Rule 021** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code with Modifiers is `H0045` with modifier `HA` and PMOD VT is NOT .
+
+**Rule 022** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code with Modifiers is `90832` with modifier `HA` and Procedure Modifier Only is NOT `22`.
+
+**Rule 023** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code with Modifiers is `H2015`, `H2016` with modifier `HA`, `HA` and Procedure Modifier Only is `HN`, `HO`.
+
+**Rule 024** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code is `T2021` and Procedure Modifier Only is `22`, `52`, `HN`, `HO` and Procedure Modifier Only is NOT `HI`.
+
+**Rule 025** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code is `Y9996`, `Y9998` and Provider Specialty is `825`.
+
+**Rule 026** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code with Modifiers is `H2020`, `T2038` with modifier `HE`, `HE` and Procedure Modifier Only is `HU` and Provider Specialty is `825`.
+
+**Rule 027** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code with Modifiers is `T2016`, `T2033` with modifier `HA`, `HA` and Procedure Modifier Only is `U1`, `U5`.
+
+**Rule 028** - COS code 08B (MNTL HLTH CLINIC) is assigned when Procedure Code with Modifiers is `T1028` with modifier `HA` and Procedure Modifier Only is `22`.
+
+**Rule 029** - COS code 08C (OTHER CLINIC) is assigned when Provider Type is `24` and Claim Type is `13`, `18` and Provider Specialty is NOT `910` and Procedure Code with Modifiers is NOT `90791` with modifier `AJ` and Procedure Code with Modifiers is NOT `86580`, `90791`, `90792`, `90832`, `90837`, `90846`, `90847`, `90863`, `90887`, `H0001`, `H0003`, `H0006`, `H0007`, `H0018`, `H0049`, `S9475` with modifier `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`.
+
+**Rule 030** - COS code 08C (OTHER CLINIC) is assigned when Procedure Code with Modifiers is `90853`, `T1006` with modifier `HA`, `HA`.
+
+**Rule 031** - COS code 08C (OTHER CLINIC) is assigned when Procedure Code with Modifiers is `H0005` with modifier `HA` and Procedure Modifier Only is `AJ`.
+
+**Rule 032** - COS code 08D (PDN - EPSDT) is assigned when Provider Type is `44` and Claim Type is `18` and Procedure Code with Modifiers is `S9123`, `S9124`, `Z1710`, `Z1710`, `Z1715`, `Z1720`, `Z1725`, `Z1730`, `Z1735`, `Z1735`, `Z1740`, `Z1745` with modifier `EP`, `EP`, `EP`, `WT`, `WT`, `WT`, `WT`, `WT`, `EP`, `WT`, `WT`, `WT`.
+
+**Rule 033** - COS code 09 (OPTICAL APPLIANCE) is assigned when Claim Type is `08`.
+
+**Rule 034** - COS code 10 (PHYSICIAN) is assigned when Provider Type is `20`, `25` and Claim Type is `04`, `13` and Procedure Code is NOT `G0054`, `G0060`, `P0000`, `P9999`, `Q0111`, `Q0116`, `R0000`, `R6999`, `W7000`, `W8899`, `W8901`, `W8999`, `Y7433`, `Y7570`, `70000`, `79999`, `80000`, `89999`, `U0001`, `U0005`, `VG0001`, `G0026`, `G0027`, `36415`, `36430`, `36440`, `36450`, `36455`, `36460`, `S9122`, `T1001`, `G2023`, `G2024` and Procedure Code with Modifiers is NOT `S5101`, `S5102`, `S5120`, `S8990`, `97535` with modifier `ST`, `ST`, `ST`, `ST`, `ST` and Procedure Code with Modifiers is NOT `H0004`, `S5135`, `97532` with modifier `ST`, `ST`, `ST` and Procedure Modifier Only is NOT `22`.
+
+**Rule 035** - COS code 11 (DENTAL) is assigned when Claim Type is `11` and Provider Type is NOT `43`.
+
+**Rule 036** - COS code 12 (FREE-STANDING ASC) is assigned when Provider Specialty is `910`.
+
+**Rule 037** - COS code 13 (OPTOMETRY) is assigned when Claim Type is `21`.
+
+**Rule 038** - COS code 14 (CHIROPRACTOR) is assigned when Claim Type is `05`.
+
+**Rule 039** - COS code 15 (NURSE PRACTITONER) is assigned when Provider Type is `70` and Procedure Code is NOT `P0000`, `P9999`, `Q0111`, `Q0116`, `W8000`, `W8899`, `W8901`, `W8999`, `80000`, `89999`, `U0001`, `U0005`, `VG0001`, `80102`, `80173`, `82947`, `87850`, `G2023`, `G2024` and Procedure Code with Modifiers is NOT `90832`, `90834`, `90837`, `90846`, `90847`, `90791`, `90853`, `90887` with modifier `AJ`, `AJ`, `AJ`, `AJ`, `AJ`, `AJ`, `AJ`, `AJ` and Procedure Modifier Only is NOT `HF`, `HE` and Provider Specialty is NOT `613`, `614` and Procedure Code with Modifiers is NOT `90832`, `90834`, `90837`, `90846`, `90847`, `90791`, `90853`, `90832`, `90834`, `90837`, `90846`, `90847`, `90853`, `90887`, `90887`, `90791` with modifier `HF`, `HF`, `HF`, `HF`, `HF`, `HF`, `HF`, `HE`, `HE`, `HE`, `HE`, `HE`, `HE`, `HF`, `HE`, `HE` and Procedure Modifier Only is NOT `HH`.
+
+**Rule 040** - COS code 16 (PSYCHOLOGIST) is assigned when Claim Type is `19` and Special Program is NOT `17` and Procedure Code is NOT `Y7433`, `Y7570`, `VS9122`, `T1001` and Procedure Code with Modifiers is NOT `S5101`, `S5102`, `S5120`, `S8990`, `97535` with modifier `ST`, `ST`, `ST`, `ST`, `ST` and Procedure Code with Modifiers is NOT `H0004`, `S5135`, `97532` with modifier `ST`, `ST`, `ST` and Procedure Modifier Only is NOT `22`.
+
+**Rule 041** - COS code 16 (PSYCHOLOGIST) is assigned when Provider Specialty is `611` and Procedure Code with Modifiers is `90832`, `90834`, `90837`, `90846`, `90847`, `90791`, `90853`, `90887` with modifier `AJ`, `AJ`, `AJ`, `AJ`, `AJ`, `AJ`, `AJ`, `AJ` and Procedure Modifier Only is `HF`, `HE`.
+
+**Rule 042** - COS code 16 (PSYCHOLOGIST) is assigned when Provider Type is `70` and Provider Specialty is `613`, `614` and Procedure Code with Modifiers is `90832`, `90834`, `90837`, `90846`, `90832`, `90834`, `90837`, `90846`, `90847`, `90791`, `90853`, `90847`, `90853`, `90791`, `90887`, `90887` with modifier `HF`, `HF`, `HF`, `HF`, `HE`, `HE`, `HE`, `HE`, `HF`, `HF`, `HF`, `HE`, `HE`, `HE`, `HF`, `HE` and Procedure Modifier Only is `HH`.
+
+**Rule 043** - COS code 17 (PODIATRIST) is assigned when Claim Type is `10` and PROC RR0000 is NOT `6999`, `W7000`, `W7999`, `70000`, `79999`.
+
+**Rule 044** - COS code 18 (PROSTHETC/ORTHOTC) is assigned when Claim Type is `17`.
+
+**Rule 045** - COS code 19 (MIDWIFERY) is assigned when Provider Type is `90` and Procedure Code is NOT `P0000`, `P9999`, `Q0111`, `Q0116`, `W8000`, `W8899`, `W8901`, `W8999`, `80000`, `89999`, `U0001`, `U0005`, `VG0001`, `80102`, `80173`, `82947`, `87850`, `G2023`, `G2024`.
+
+**Rule 046** - COS code 20A (DRUGS-LTC) is assigned when Provider Type is `26`.
+
+**Rule 047** - COS code 22A (DAY TRAINING) is assigned when Provider Specialty is `725`.
+
+**Rule 048** - COS code 22B (EARLY INTERVENTN) is assigned when Provider Specialty is `730`.
+
+**Rule 049** - COS code 22C (SPECIAL EDUCATION) is assigned when Provider Specialty is `740`.
+
+**Rule 050** - COS code 22E (PACT) is assigned when Provider Specialty is `908`.
+
+**Rule 051** - COS code 23A (CSOCI) is assigned when Provider Type is `59` and Program Status is `641`.
+
+**Rule 052** - COS code 23A (CSOCI) is assigned when Procedure Code is `Y9930`, `Y9995`, `VZ5008`.
+
+**Rule 053** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H0017`, `H0017`, `H0018`, `H0019`, `H0019`, `H0037`, `H0043`, `H0043`, `H2013`, `H2020`, `T2023`, `T2038`, `T2038` with modifier `HU`, `HW`, `HU`, `HU`, `HW`, `HW`, `HU`, `HW`, `HU`, `HU`, `TJ`, `HU`, `HW`.
+
+**Rule 054** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H0043` with modifier `HU` and Procedure Modifier Only is `22`.
+
+**Rule 055** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H0019`, `H2020` with modifier `HU`, `HW` and Procedure Modifier Only is `52`.
+
+**Rule 056** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H2020`, `H2020`, `T2038`, `T2038` with modifier `HA`, `HE`, `HA`, `HE` and Procedure Modifier Only is `HW`.
+
+**Rule 057** - COS code 23A (CSOCI) is assigned when Provider Specialty is `891`, `905`, `V813`, `907`.
+
+**Rule 058** - COS code 23A (CSOCI) is assigned when Procedure Code is `Y9997`, `Y9999` and Provider Specialty is `825`.
+
+**Rule 059** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H2020`, `T2038` with modifier `HA`, `HA` and Procedure Modifier Only is `HU` and Provider Specialty is `825`.
+
+**Rule 060** - COS code 23A (CSOCI) is assigned when PROCMVH0045T is .
+
+**Rule 061** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H0043` with modifier `HA` and Procedure Modifier Only is `U1`.
+
+**Rule 062** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H0019` with modifier `HA` and Procedure Modifier Only is `52`, `HA`.
+
+**Rule 063** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H2036` with modifier `HA` and Procedure Modifier Only is `22`, `HA`.
+
+**Rule 064** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H0006` with modifier `HA` and Procedure Modifier Only is `22`.
+
+**Rule 065** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `A0090`, `H0001`, `H0031`, `H0038`, `S0215`, `S5105`, `S5110`, `S5150`, `S9475`, `S9970`, `T1005`, `T1013`, `T2013`, `T2036`, `T2037`, `T2038` with modifier `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`, `HA`.
+
+**Rule 066** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H2020` with modifier `HA` and Provider Specialty is `825`, `827`.
+
+**Rule 067** - COS code 23A (CSOCI) is assigned when Procedure Code with Modifiers is `H0018` with modifier `TJ` and Procedure Modifier Only is `U1`, `U2` and Provider Specialty is `826`.
+
+**Rule 068** - COS code 25 (FQHC) is assigned when Provider Type is `43`.
+
+**Rule 069** - COS code 30 (MEDICAL SUPPLIES) is assigned when Claim Type is `09` and Procedure Code is `A4000`, `A6499`, `A9150`, `A9300`, `B4000`, `B9999`, `X6000`, `X8199`, `X8201`, `X8999`.
+
+**Rule 070** - COS code 31 (DME) is assigned when Claim Type is `09`.
+
+**Rule 071** - COS code 32 (HEARING AID) is assigned when Claim Type is `23`.
+
+**Rule 072** - COS code 40 (HOME HEALTH) is assigned when Claim Type is `06`.
+
+**Rule 073** - COS code 40 (HOME HEALTH) is assigned when Provider Specialty is `980` and Claim Type is `18` and Special Program is NOT `09`.
+
+**Rule 074** - COS code 40 (HOME HEALTH) is assigned when Procedure Code with Modifiers is `S9122`, `S5130` with modifier `HA`, `HA`.
+
+**Rule 075** - COS code 40 (HOME HEALTH) is assigned when PROCMVT1016 is `1`.
+
+**Rule 076** - COS code 40 (HOME HEALTH) is assigned when Procedure Code with Modifiers is `T1016`, `T1016` with modifier `HD`, `TD` and PMOD V is `1`.
+
+**Rule 077** - COS code 50 (HOSPICE) is assigned when Provider Type is `63`.
+
+**Rule 078** - COS code 60 (LABORATORY) is assigned when Claim Type is `16`.
+
+**Rule 079** - COS code 60 (LABORATORY) is assigned when Claim Type is `04`, `13`, `22` and Procedure Code is `G0054`, `G0060`, `P0000`, `P9999`, `Q0111`, `Q0116`, `W7000`, `W8899`, `W8901`, `W8999`, `80000`, `89999`, `U0001`, `U0005`, `VG0001`, `G0026`, `G0027`, `36415`, `36430`, `36440`, `36450`, `36455`, `36460`, `G2023`, `G2024` and Procedure Code is `P0000`, `P9999`, `Q0111`, `Q0116`, `W8000`, `W8899`, `W8901`, `W8999`, `80000`, `89999`, `VG0001`, `80102`, `80173`, `82947`, `87850`, `U0005`.
+
+**Rule 080** - COS code 60 (LABORATORY) is assigned when Procedure Code with Modifiers is `H0003`, `H0049`, `86580` with modifier `HA`, `HA`, `HA`.
+
+**Rule 081** - COS code 65 (RADIOLOGY) is assigned when Claim Type is `04`, `10` and PROC RR0000 is `6999`, `W7000`, `W7999`, `70000`, `79999`.
+
+**Rule 082** - COS code 70 (TRANSPORTATION) is assigned when Claim Type is `07` and Special Program is NOT `09`.
+
+**Rule 083** - COS code 80 (ADULT DAY HEALTH) is assigned when Provider Type is `92` and Special Program is NOT `09` and Procedure Code is NOT `Z1860`.
+
+**Rule 084** - COS code 81A (PRSNL CARE - PHYS) is assigned when Procedure Code is `Z1600`, `Z1617`, `VT1001`, `S9122` and Procedure Modifier Only is NOT `UC`, `ZI` and Special Program is NOT `09`.
+
+**Rule 085** - COS code 81A (PRSNL CARE - PHYS) is assigned when Procedure Code is `Y9833` and Special Program is NOT `09`.
+
+**Rule 086** - COS code 81A (PRSNL CARE - PHYS) is assigned when Procedure Code with Modifiers is `S5165`, `T2028`, `T2029`, `T2039` with modifier `HA`, `HA`, `HA`, `HA`.
+
+**Rule 087** - COS code 81A (PRSNL CARE - PHYS) is assigned when Procedure Code is `99199`, `S5111`, `S5120`, `S5125`, `S5165`, `S5170`, `S9122`, `T1019`, `T1999`, `T2003`, `T2015`, `T2025`, `T2028`, `T2035`, `T2039`, `T2041`, `T5999` and Procedure Modifier Only is `SE`.
+
+**Rule 088** - COS code 81A (PRSNL CARE - PHYS) is assigned when Procedure Code is `T1019`, `T1020`.
+
+**Rule 089** - COS code 81B (PRSNL CARE - MH) is assigned when Procedure Code is `Z1600`, `Z1605`, `Z1610`, `Z1613`, `VT1001` and Procedure Modifier Only is `UC`, `ZI` and Special Program is NOT `09`.
+
+**Rule 090** - COS code 81C (ADULT MH REHAB) is assigned when Procedure Code is `Z7333`, `Z7338` and Special Program is NOT `09`.
+
+**Rule 091** - COS code 81C (ADULT MH REHAB) is assigned when Procedure Code with Modifiers is `H0019`, `H0019`, `H0019`, `H0019`, `H0019` with modifier `U1`, `U2`, `U3`, `U4`, `U5` and Special Program is NOT `09`.
+
+**Rule 092** - COS code 81C (ADULT MH REHAB) is assigned when Procedure Code with Modifiers is `H0019`, `H0019`, `H0019`, `H0019` with modifier `U1`, `U2`, `U3`, `U4` and Procedure Modifier Only is `52` and Special Program is NOT `09`.
+
+**Rule 093** - COS code 87 (DHSS/ECO WAIVER) is assigned when Provider Type is `35` and Special Program is `28`, `32`, `34`, `36`, `V22`, `62`.
+
+**Rule 094** - COS code 87 (DHSS/ECO WAIVER) is assigned when Special Program is `22`, `31`, `32` and Provider Specialty is `760`, `862`, `980`, `982`.
+
+**Rule 095** - COS code 87 (DHSS/ECO WAIVER) is assigned when Special Program is `33` and Provider Specialty is `845`, `846`, `847`, `848`, `851`.
+
+**Rule 096** - COS code 87 (DHSS/ECO WAIVER) is assigned when Provider Specialty is `812`, `814` and Special Program is `32`.
+
+**Rule 097** - COS code 88 (TBI) is assigned when Special Program is `17` and Procedure Code is `Y7433`, `Y7570`, `VS5109`, `Y7733`, `S5165` and Procedure Code with Modifiers is `S5101`, `S5102`, `S5120`, `S5199`, `S8990`, `T1028`, `97535`, `T2025` with modifier `ST`, `ST`, `ST`, `HI`, `ST`, `HI`, `ST`, `ST` and Procedure Code with Modifiers is `H0004`, `S5135`, `97532` with modifier `ST`, `ST`, `ST` and Procedure Modifier Only is `22` and Procedure Code with Modifiers is `S9129`, `S9131`, `S9128`, `T2012` with modifier `HQ`, `HQ`, `HQ`, `HQ` and Procedure Modifier Only is `ST`.
+
+**Rule 098** - COS code 89 (ABC WAIVER) is assigned when Provider Specialty is `831` and Special Program is NOT `09`.
+
+**Rule 099** - COS code 90 (DDD) is assigned when Provider Type is `95`.
+
+**Rule 100** - COS code 90 (DDD) is assigned when Provider Type is `44` and Provider Specialty is `871`, `872`, `873`, `874`, `875`, `876`, `877`, `878`, `879`, `881`, `882`, `883`, `884`, `885`, `886`, `887`, `888`, `889`, `971`, `972`, `973`, `974`, `975`, `976` and Special Program is `07`, `46`.
+
+**Rule 101** - COS code 91 (CCPED) is assigned when Special Program is `08`.
+
+**Rule 102** - COS code 92 (ACCAP) is assigned when Special Program is `05` and Procedure Code is `Z1710`, `Z1745`, `Z1800`, `Z1899` and Procedure Code with Modifiers is `S5199`, `T1028`, `S9123`, `S9124` with modifier `HI`, `HI`, `52`, `52` and PROCMVS9123TDS9123T is `S9124TES9124TV` and Procedure Modifier Only is `52`.
+
+**Rule 103** - COS code 93A (CRPD - NOT USED) is assigned when Special Program is `04` and Procedure Code is `Z1700`, `Z1745`.
+
+**Rule 104** - COS code 93B (CRPD - NO PDN) is assigned when Special Program is `06` and Procedure Code is `Z1700`, `Z1745`, `VS5160`, `S5161`, `S5162`, `S5165` and Procedure Code with Modifiers is `S5199`, `T1028` with modifier `HI`, `HI`.
+
+**Rule 105** - COS code 93C (CRPD - PDN) is assigned when Special Program is `03` and Procedure Code is `Z1700`, `Z1745`, `VS5160`, `S5161`, `S5162`, `S5165` and Procedure Code with Modifiers is `S5199`, `T1028`, `S9123`, `S9124` with modifier `HI`, `HI`, `52`, `52` and PROCMVS9123TDS9123T is `S9124TES9124TV` and Procedure Modifier Only is `52`.
+
+**Rule 106** - COS code 94 (GSHP) is assigned when GSHP is `5`, `9`, `V1`, `2`.
+
+**Rule 107** - COS code 95 (PREPAID HEALTH) is assigned when Provider Type is `37`.
+
+**Rule 108** - COS code 96 (HOME CARE EXP) is assigned when Special Program is `09`.
+
+**Rule 109** - COS code 99 (DEFAULT) is assigned when Procedure Code is `T1027`, `S9482` and Procedure Modifier Only is `UN`, `UP` and Procedure Modifier Only is NOT `AA`, `99`.
+
+
+
+---
+
+## Output Format Requirements
+
+### CRITICAL: Use Simple Natural Language Format
+
+Match the format of COSMATRX-integrated-report.md EXACTLY:
+
+```markdown
+**Rule XXX** - COS code `YY` (Description) is assigned when [natural language conditions].
+```
+
+**DO NOT include**:
+- Evidence sections
+- Cross-reference sections
+- Type sections
+- COBOL code blocks
+- Source attribution
+
+**DO include**:
+- Rule number (sequential)
+- COS code with description
+- Natural language conditions with inline code descriptions
+
+### Format Examples
+
+**GOOD** (Simple natural language):
+```markdown
+**Rule 001** - COS code `94` (Garden State Health Plan - GSHP) is assigned when GSHP-RELATED flag is `1` (GSHP Encounter Claim), `2` (GSHP Referral In-Plan Capitated), `5` (GSHP Capitated Claim), `6` (GSHP Referral Inpatient), `7` (GSHP PCM Capitated Claim), `8` (GSHP Referral In-Plan Non-Capitated), or `9` (GSHP In-Plan Non-Capitated).
+
+**Rule 002** - COS code `37` (Managed Care) is assigned when Provider Type is `37` (HMO/Managed Care) OR Media Code is `7` (Encounters Fee for Service).
+
+**Rule 003** - COS code `01A` (INPAT GENL HOSP) is assigned when Claim Type is `01` (Inpatient Hospital) OR Medicare Part A Inpatient Hospital Crossover (14/01) and Provider Type is `60` (General Hospital).
+```
+
+**BAD** (Too complex):
+```markdown
+**Rule 001** - COS code `94` (Garden State Health Plan - GSHP) is assigned when GSHP-RELATED flag is `1`, `2`, `5`, `6`, `7`, `8`, or `9`.
+
+**Evidence**: [Line 77-80]
+```cobol
+IF A-CLM-GSHP-RELATED = '1' OR '2'...
+```
+
+**Cross-Reference**: Overrides COSMATRX Rule 106
+
+**Type**: Override Rule
+```
+
+---
+
+## Rule Numbering
+
+Number rules sequentially starting from 001:
+
+- **Rules 001-003**: NJ2BE067 Override Rules (GSHP, Managed Care, Lab format)
+- **Rules 004-112**: COSMATRX Base Rules (109 rules, with Medicare crossover variations)
+- **Rules 113-114**: NJ2BE067 Fallback Rules (08C for Claim Type 18, 99 for others)
+
+**Total: 114 rules**
+
+---
+
+## Key Guidelines
+
+### 1. Inline Code Descriptions
+
+ALWAYS include descriptions inline with code values:
+- **CORRECT**: Claim Type is `01` (Inpatient Hospital)
+- **WRONG**: Claim Type is `01`
+
+- **CORRECT**: GSHP-RELATED flag is `1` (GSHP Encounter Claim), `2` (GSHP Referral In-Plan Capitated)
+- **WRONG**: GSHP-RELATED flag is `1`, `2`
+
+### 2. Medicare Crossovers
+
+Include Medicare crossover variations inline with OR:
+- **CORRECT**: Claim Type is `01` (Inpatient Hospital) OR Medicare Part A Inpatient Hospital Crossover (14/01)
+- **CORRECT**: Claim Type is `18` (Independent Clinic) OR Medicare Part B Independent Clinic Crossover (15/18)
+
+### 3. List ALL Codes Explicitly
+
+NEVER generalize - list every code:
+- **CORRECT**: Provider Specialty is `819`, `822`, `824`
+- **WRONG**: Provider Specialty includes specific values
+
+- **CORRECT**: Procedure Code is `90792`, `90863`, `90887`, `96152`, `96158`, `96159`, `H0007`, `H0015`, `H0018`
+- **WRONG**: Procedure Code includes specific mental health codes
+
+### 4. Conditional Exclusions
+
+For procedure-based COSMATRX rules that have conditional exclusions (from NJ2BE067 lines 330-376), append:
+```
+and claim is NOT Claim Type `01` (Inpatient Hospital), NOT Claim Type `06` (Home Health), NOT Medicare Part A Inpatient Hospital Crossover (14/01), and NOT Outpatient Lab Procedure
+```
+
+Example:
+```markdown
+**Rule 015** - COS code `08A` (COMM HLTH CLINIC) is assigned when Procedure Code is `90792`, `90863`, `90887`, `96152`, `96158`, `96159`, `H0007`, `H0015`, `H0018` and Procedure Modifier Only is `HA` and claim is NOT Claim Type `01` (Inpatient Hospital), NOT Claim Type `06` (Home Health), NOT Medicare Part A Inpatient Hospital Crossover (14/01), and NOT Outpatient Lab Procedure.
+```
+
+### 5. Code Descriptions
+
+Use descriptions from the NJ2BE067 extraction for:
+- GSHP codes (1-9)
+- Claim Types (01-23)
+- Provider Types (20, 24, 25, etc.)
+- Media Codes (0-8)
+
+For COSMATRX rules, preserve existing code descriptions where available.
+
+---
+
+## Output Structure
+
+```markdown
+# NJ2BE067 + COSMATRX Consolidated Business Rules Report
+
+**Rule 001** - [Override rule 1]
+
+**Rule 002** - [Override rule 2]
+
+**Rule 003** - [Override rule 3]
+
+**Rule 004** - [COSMATRX rule 1 with Medicare crossovers and conditional exclusions]
+
+**Rule 005** - [COSMATRX rule 2 with Medicare crossovers and conditional exclusions]
+
+...
+
+**Rule 112** - [COSMATRX rule 109]
+
+**Rule 113** - [Fallback rule 1]
+
+**Rule 114** - [Fallback rule 2]
+```
+
+---
+
+## Processing Instructions
+
+1. **Start with Override Rules (001-003)**: Copy from NJ2BE067 extraction, ensuring GSHP codes have inline descriptions
+
+2. **Add COSMATRX Rules (004-112)**: For each of the 109 COSMATRX rules:
+   - Include Medicare crossover variations with OR
+   - Add conditional exclusions for procedure-based rules
+   - Preserve all code descriptions
+   - List ALL codes explicitly (no generalizations)
+
+3. **End with Fallback Rules (113-114)**: Copy from NJ2BE067 extraction
+
+4. **Use simple format**: One-line rule statements only, no evidence/cross-reference/type sections
+
+---
+
+## Begin Report Generation
+
+Generate the consolidated business rules report following the format above. Output ONLY the markdown report, starting with:
+
+```markdown
+# NJ2BE067 + COSMATRX Consolidated Business Rules Report
+
+**Rule 001** - COS code `94`...
+```
+
+Do not include any explanatory text before or after the report. Just the rules in natural language format.

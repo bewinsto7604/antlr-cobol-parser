@@ -1,0 +1,23 @@
+{
+  "name": "antlr-cobol-parser",
+  "version": "1.0.0",
+  "description": "COBOL copybook parser using ANTLR4 grammar",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "parse": "node src/index.js",
+    "generate": "C:\\Users\\samue\\Downloads\\OpenJDK21U-jre_x64_windows_hotspot_21.0.9_10\\jdk-21.0.9+10-jre\\bin\\java.exe -jar antlr-4.13.1-complete.jar -Dlanguage=JavaScript -o src/generated grammar/Cobol85.g4",
+    "test": "node src/test.js",
+    "integrated": "node src/integrated-parser.js"
+  },
+  "keywords": ["cobol", "parser", "antlr", "copybook", "business-rules"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "antlr4": "^4.13.1"
+  },
+  "devDependencies": {
+    "antlr4-c3": "^3.3.0",
+    "antlr4ng-cli": "^2.0.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "cobol-lsp.cpy-manager.paths-local": [
+    "${workspaceFolder}/copybook",
+    "${workspaceFolder}/cobol"
+  ],
+  "cobol-lsp.sourceformat": "fixed"
+}

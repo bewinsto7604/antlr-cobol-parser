@@ -1,0 +1,78 @@
+Mainframe Name: CLINIC CODE 						ID No: 020207
+DEFINITION:   Type of Hospital Clinic Department
+ALTERNATE/COBOL NAMES:
+C24-CLINIC-CDY13-CLINIC-CD
+CLINIC_CD
+OP-CLINIC-CDE
+TT-A-O-CLINIC-CDE
+VALUES:
+00 Emergency Room
+01 Alcoholism
+02 Allergy
+03 Arthritis, Rheumatology
+04 Cardiac Cardiovascular Pacemaker, Rheumatic Fever
+05 Chest, TB
+06 Dental
+07 Dermatology
+08 Diabetic, Endocrine
+09 Eye, E.N.T
+10 Family Planning
+11 Gynecology
+12 Hematology
+13 Medical, Gastrointestinal, Gastroenterology
+14 Neurology, Neurosurgery
+15 OB, Prenatal
+16 Orthopedic
+17 Pediatric
+18 Physical Therapy, Physical Medicine, Rehabilitation
+19 Podiatry
+20 Proctology
+21 Psychiatry, Mental Health
+22 Speech And Hearing, Speech Pathology
+23 Surgery, Plastic Surgery
+24 Tumor
+25 Urology
+26 Other
+27 EPSDT
+28 Partial Hospitalization
+ 
+Mainframe Name: FACILITY CONTROL CODE				 ID No: 040075
+
+DEFINITION: A code indicating the fiscal classification/proprietary nature of provider.
+ALTERNATE/COBOL NAMES:
+A-FACILITY-CNTRL-CDE
+C05-FACILITY-CONTROL
+FACILITY-CONTROL
+FACILITY_CONTROL
+P01-FACILITY-CONTROL
+Y01-FACILITY-CONTROL
+VALUES:
+0 Not applicable
+1 Private
+2 Profit
+3 Non-Profit
+4 Public
+5 Municipal
+6 State
+7 Charity
+ 
+Mainframe Name: FACILITY CONTROL CODE				 ID No: 040075
+
+DEFINITION: A code indicating the fiscal classification/proprietary nature of provider.
+ALTERNATE/COBOL NAMES:
+A-FACILITY-CNTRL-CDE
+C05-FACILITY-CONTROL
+FACILITY-CONTROL
+FACILITY_CONTROL
+P01-FACILITY-CONTROL
+Y01-FACILITY-CONTROL
+VALUES:
+0 Not applicable
+1 Private
+2 Profit
+3 Non-Profit
+4 Public
+5 Municipal
+6 State
+7 Charity
+
