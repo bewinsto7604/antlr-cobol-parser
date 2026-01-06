@@ -40,8 +40,9 @@ def parse_cosmatrx_structure(filler_lines):
             continue
 
         # Check if this is a COS code definition line
-        # Format: "15 NURSE PRACTITONER00"
-        cos_match = re.match(r'^(\d+[A-Z]?)\s+(.+?)\s+00\s*$', line)
+        # Format: "15 NURSE PRACTITONER00" or "14 CHIROPRACTOR     00"
+        # Note: Some descriptions have no space before "00"
+        cos_match = re.match(r'^(\d+[A-Z]?)\s+(.+?)\s*00\s*$', line)
         if cos_match:
             # Save previous COS
             if current_cos:
@@ -299,9 +300,11 @@ def condition_to_text(condition):
     range_value = condition['range_value']
 
     # Format values based on type
-    if condition['type'] == 'PROCMV' and values and ' ' not in values:
+    if condition['type'] == 'PROCMV' and values:
         # Procedure codes with embedded modifiers
-        formatted = format_procedure_modifiers(values)
+        # Remove spaces (from continuation lines) and parse
+        values_no_spaces = values.replace(' ', '')
+        formatted = format_procedure_modifiers(values_no_spaces)
     else:
         # Regular codes
         formatted = format_code_range(values, range_value)
