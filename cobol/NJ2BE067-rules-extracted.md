@@ -1,10 +1,10 @@
 # NJ2BE067 Business Rules Report
 
-**Rule 001** - COS code `94` (Garden State Health Plan - GSHP) is assigned when GSHP-RELATED flag is `1` (GSHP Encounter Claim), `2` (GSHP Referral In-Plan Capitated), `5` (GSHP Capitated Claim), `6` (GSHP Referral Inpatient), `7` (GSHP PCM Capitated Claim), `8` (GSHP Referral In-Plan Non-Capitated), `9` (GSHP In-Plan Non-Capitated).
+**Rule 001** - Garden State Health Plan - GSHP (94) is assigned when GSHP-RELATED flag is GSHP Encounter Claim (`1`), GSHP Referral In-Plan Capitated (`2`), GSHP Capitated Claim (`5`), GSHP Referral Inpatient (`6`), GSHP PCM Capitated Claim (`7`), GSHP Referral In-Plan Non-Capitated (`8`), GSHP In-Plan Non-Capitated (`9`).
 
-**Rule 002** - COS code `37` (Managed Care) is assigned when Provider Type is `37` (HMO/Managed Care) OR Media Code is `7` (Encounters Fee for Service).
+**Rule 002** - Managed Care (37) is assigned when Provider Type is HMO/Managed Care (`37`) OR Media Code is Encounters Fee for Service (`7`).
 
-**Rule 003** - COS code `60` (Laboratory) is assigned when Procedure Code follows lab format (first 4 characters numeric and last character alphabetic) AND claim is NOT Claim Type `03` (Outpatient Hospital) AND NOT Medicare Part A Outpatient Hospital Crossover (14/03).
+**Rule 003** - Laboratory (60) is assigned when Procedure Code first 4 characters are numeric (`0000` through `9999`) AND last character is alphabetic (U or M) AND claim is NOT Claim Type Outpatient Hospital (`03`) AND NOT Medicare Part A Outpatient Hospital Crossover (14/03).
 
 **COSMATRX Traversal** - After checking the above override rules, NJ2BE067 calls the COSMATRX matrix (Lines 95-115) to evaluate all 109 base COSMATRX rules. The program performs matrix traversal by:
 
@@ -15,9 +15,9 @@
 
 **Note**: All 109 COSMATRX base rules are called via matrix traversal. See COSMATRX-integrated-report.md for the complete list of base rules.
 
-**Rule 004** - COS code `08C` (Other Clinic) is assigned when no COSMATRX match is found AND Claim Type is `18` (Independent Clinic) OR Medicare Part B Independent Clinic Crossover (15/18).
+**Rule 004** - Other Clinic (08C) is assigned when no COSMATRX match is found AND Claim Type is Independent Clinic (`18`) OR Medicare Part B Independent Clinic Crossover (15/18).
 
-**Rule 005** - COS code `99` (Other) is assigned when no COSMATRX match is found and the claim does not qualify for COS `08C`.
+**Rule 005** - Default/Other (99) is assigned when no COSMATRX match is found and the claim does not qualify for Other Clinic (08C).
 
 ---
 

@@ -40,9 +40,9 @@ def parse_cosmatrx_structure(filler_lines):
             continue
 
         # Check if this is a COS code definition line
-        # Format: "15 NURSE PRACTITONER00" or "14 CHIROPRACTOR     00"
-        # Note: Some descriptions have no space before "00"
-        cos_match = re.match(r'^(\d+[A-Z]?)\s+(.+?)\s*00\s*$', line)
+        # Format: "15 NURSE PRACTITONER00" or "14 CHIROPRACTOR     00" or "08ACOMM HLTH CLINIC 00"
+        # Note: Some descriptions have no space before "00", and some codes have no space after code (08A)
+        cos_match = re.match(r'^(\d+[A-Z]?)\s*(.+?)\s*00\s*$', line)
         if cos_match:
             # Save previous COS
             if current_cos:
@@ -332,8 +332,8 @@ def generate_report(cos_codes, output_file):
                 condition_texts = [condition_to_text(cond) for cond in path]
                 full_condition = ' and '.join(condition_texts)
 
-                f.write(f"**Rule {rule_number:03d}** - COS code {cos['code']} "
-                       f"({cos['description']}) is assigned when {full_condition}.\n\n")
+                f.write(f"**Rule {rule_number:03d}** - {cos['description']} "
+                       f"({cos['code']}) is assigned when {full_condition}.\n\n")
 
                 rule_number += 1
 

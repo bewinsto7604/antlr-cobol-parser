@@ -18,13 +18,14 @@ def read_file(filepath):
 def parse_cosmatrx_rules(cosmatrx_content):
     """Parse COSMATRX rules from markdown content."""
     rules = []
-    pattern = r'\*\*Rule (\d+)\*\* - COS code (.+?) \((.+?)\) is assigned when (.+?)(?=\n\n|\n\*\*Rule|\Z)'
+    # Updated pattern to match new format: Description (Code)
+    pattern = r'\*\*Rule (\d+)\*\* - (.+?) \((.+?)\) is assigned when (.+?)(?=\n\n|\n\*\*Rule|\Z)'
 
     matches = re.finditer(pattern, cosmatrx_content, re.DOTALL)
     for match in matches:
         rule_num = match.group(1)
-        cos_code = match.group(2)
-        cos_desc = match.group(3)
+        cos_desc = match.group(2)  # Description is now first
+        cos_code = match.group(3)  # Code is now second (in brackets)
         conditions = match.group(4).strip()
 
         rules.append({
@@ -76,7 +77,7 @@ def add_claim_type_descriptions(conditions):
     for code, desc in claim_type_map.items():
         # Match patterns like "Claim Type is `01`" without description
         pattern = rf'Claim Type is `{code}`(?!\s*\()'
-        replacement = f'Claim Type is `{code}` ({desc})'
+        replacement = f'Claim Type is {desc} (`{code}`)'
         conditions = re.sub(pattern, replacement, conditions)
 
     return conditions
@@ -106,9 +107,9 @@ def add_medicare_crossovers(conditions, cos_code):
 
     # Add Medicare crossovers for each claim type mentioned
     for code, (desc, crossover, part) in claim_type_map.items():
-        # Pattern: "Claim Type is `XX` (Description)"
-        pattern = rf'Claim Type is `{code}` \({desc}\)'
-        replacement = f'Claim Type is `{code}` ({desc}) OR Medicare Part {part} {desc} Crossover ({crossover})'
+        # Pattern: "Claim Type is Description (`XX`)"
+        pattern = rf'Claim Type is {desc} \(`{code}`\)'
+        replacement = f'Claim Type is {desc} (`{code}`) OR Medicare Part {part} {desc} Crossover ({crossover})'
         conditions = re.sub(pattern, replacement, conditions)
 
     return conditions
@@ -118,9 +119,9 @@ def add_conditional_exclusions(conditions):
     """Add conditional exclusions for procedure-based rules."""
     if is_procedure_based_rule(conditions):
         # Don't add exclusions if already present
-        if 'NOT Claim Type `01`' not in conditions:
-            exclusion = (' and claim is NOT Claim Type `01` (Inpatient Hospital), '
-                        'NOT Claim Type `06` (Home Health), '
+        if 'NOT Claim Type Inpatient Hospital' not in conditions:
+            exclusion = (' and claim is NOT Claim Type Inpatient Hospital (`01`), '
+                        'NOT Claim Type Home Health (`06`), '
                         'NOT Medicare Part A Inpatient Hospital Crossover (14/01), '
                         'and NOT Outpatient Lab Procedure')
             # Add before the final period
@@ -144,33 +145,33 @@ def generate_consolidated_report(nj2be067_rules, cosmatrx_rules, output_file):
             {
                 'cos_code': '94',
                 'cos_desc': 'Garden State Health Plan - GSHP',
-                'conditions': ('GSHP-RELATED flag is `1` (GSHP Encounter Claim), '
-                              '`2` (GSHP Referral In-Plan Capitated), '
-                              '`5` (GSHP Capitated Claim), '
-                              '`6` (GSHP Referral Inpatient), '
-                              '`7` (GSHP PCM Capitated Claim), '
-                              '`8` (GSHP Referral In-Plan Non-Capitated), '
-                              'or `9` (GSHP In-Plan Non-Capitated)')
+                'conditions': ('GSHP-RELATED flag is GSHP Encounter Claim (`1`), '
+                              'GSHP Referral In-Plan Capitated (`2`), '
+                              'GSHP Capitated Claim (`5`), '
+                              'GSHP Referral Inpatient (`6`), '
+                              'GSHP PCM Capitated Claim (`7`), '
+                              'GSHP Referral In-Plan Non-Capitated (`8`), '
+                              'or GSHP In-Plan Non-Capitated (`9`)')
             },
             {
                 'cos_code': '37',
                 'cos_desc': 'Managed Care',
-                'conditions': ('Provider Type is `37` (HMO/Managed Care) '
-                              'OR Media Code is `7` (Encounters Fee for Service)')
+                'conditions': ('Provider Type is HMO/Managed Care (`37`) '
+                              'OR Media Code is Encounters Fee for Service (`7`)')
             },
             {
                 'cos_code': '60',
                 'cos_desc': 'Laboratory',
-                'conditions': ('Procedure Code follows lab format (first 4 characters numeric '
-                              'and last character alphabetic) AND claim is NOT Claim Type `03` '
-                              '(Outpatient Hospital) AND NOT Medicare Part A Outpatient Hospital '
+                'conditions': ('Procedure Code first 4 characters are numeric (`0000` through `9999`) '
+                              'AND last character is alphabetic (U or M) AND claim is NOT Claim Type '
+                              'Outpatient Hospital (`03`) AND NOT Medicare Part A Outpatient Hospital '
                               'Crossover (14/03)')
             }
         ]
 
         for rule in override_rules:
-            f.write(f"**Rule {rule_number:03d}** - COS code `{rule['cos_code']}` "
-                   f"({rule['cos_desc']}) is assigned when {rule['conditions']}.\n\n")
+            f.write(f"**Rule {rule_number:03d}** - Modified COS is assigned {rule['cos_desc']} "
+                   f"(`{rule['cos_code']}`) when {rule['conditions']}.\n\n")
             rule_number += 1
 
         # Add COSMATRX Rules (004-112)
@@ -189,8 +190,8 @@ def generate_consolidated_report(nj2be067_rules, cosmatrx_rules, output_file):
             # Remove trailing period if exists (we'll add it back)
             conditions = conditions.rstrip('.')
 
-            f.write(f"**Rule {rule_number:03d}** - COS code `{rule['cos_code']}` "
-                   f"({rule['cos_desc']}) is assigned when {conditions}.\n\n")
+            f.write(f"**Rule {rule_number:03d}** - Modified COS is assigned {rule['cos_desc']} "
+                   f"(`{rule['cos_code']}`) when {conditions}.\n\n")
             rule_number += 1
 
         # Add NJ2BE067 Fallback Rules (113-114)
@@ -198,21 +199,21 @@ def generate_consolidated_report(nj2be067_rules, cosmatrx_rules, output_file):
             {
                 'cos_code': '08C',
                 'cos_desc': 'Other Clinic',
-                'conditions': ('no COSMATRX match is found AND Claim Type is `18` '
-                              '(Independent Clinic) OR Medicare Part B Independent Clinic '
+                'conditions': ('no COSMATRX match is found AND Claim Type is '
+                              'Independent Clinic (`18`) OR Medicare Part B Independent Clinic '
                               'Crossover (15/18)')
             },
             {
                 'cos_code': '99',
                 'cos_desc': 'Other',
                 'conditions': ('no COSMATRX match is found and the claim does not qualify '
-                              'for COS `08C`')
+                              'for COS Other Clinic (`08C`)')
             }
         ]
 
         for rule in fallback_rules:
-            f.write(f"**Rule {rule_number:03d}** - COS code `{rule['cos_code']}` "
-                   f"({rule['cos_desc']}) is assigned when {rule['conditions']}.\n\n")
+            f.write(f"**Rule {rule_number:03d}** - Modified COS is assigned {rule['cos_desc']} "
+                   f"(`{rule['cos_code']}`) when {rule['conditions']}.\n\n")
             rule_number += 1
 
 
@@ -242,6 +243,17 @@ def main():
     cosmatrx_rules = parse_cosmatrx_rules(cosmatrx_content)
     print(f"Found {len(cosmatrx_rules)} COSMATRX rules")
 
+    # Debug: Print first few rule numbers to verify parsing
+    if len(cosmatrx_rules) > 0:
+        print(f"First 5 COSMATRX rules parsed:")
+        for i, rule in enumerate(cosmatrx_rules[:5]):
+            print(f"  COSMATRX Rule {rule['number']}: {rule['cos_desc']} ({rule['cos_code']})")
+        if len(cosmatrx_rules) >= 15:
+            print(f"Rules 11-15:")
+            for i in range(10, min(15, len(cosmatrx_rules))):
+                rule = cosmatrx_rules[i]
+                print(f"  COSMATRX Rule {rule['number']}: {rule['cos_desc']} ({rule['cos_code']})")
+
     print(f"Generating consolidated report: {output_file}...")
     generate_consolidated_report(nj2be067_content, cosmatrx_rules, output_file)
 
@@ -250,6 +262,10 @@ def main():
     print(f"  - COSMATRX rules: {len(cosmatrx_rules)} (Rules 004-{3 + len(cosmatrx_rules):03d})")
     print(f"  - Fallback rules: 2 (Rules {3 + len(cosmatrx_rules) + 1:03d}-{3 + len(cosmatrx_rules) + 2:03d})")
     print(f"  - Total rules: {3 + len(cosmatrx_rules) + 2}")
+    print(f"\nMapping examples:")
+    print(f"  - Consolidated Rule 004 = COSMATRX Rule 001")
+    print(f"  - Consolidated Rule 014 = COSMATRX Rule 011")
+    print(f"  - Consolidated Rule {3 + len(cosmatrx_rules):03d} = COSMATRX Rule {len(cosmatrx_rules):03d}")
     print(f"\nOutput format: Natural language (matching COSMATRX-integrated-report.md)")
 
     # Exit cleanly

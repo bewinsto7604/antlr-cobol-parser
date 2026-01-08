@@ -128,7 +128,7 @@ def format_gshp_values(descriptions):
     for val in gshp_values:
         desc = gshp_map.get(val, '')
         if desc:
-            formatted.append(f"`{val}` ({desc})")
+            formatted.append(f"{desc} (`{val}`)")
         else:
             formatted.append(f"`{val}`")
 
@@ -144,31 +144,34 @@ def generate_natural_language_rules(descriptions, output_file):
 
         # Rule 001: GSHP Override
         gshp_formatted = format_gshp_values(descriptions)
-        f.write(f"**Rule 001** - COS code `94` (Garden State Health Plan - GSHP) is assigned when ")
+        f.write(f"**Rule 001** - Garden State Health Plan - GSHP (94) is assigned when ")
         f.write(f"GSHP-RELATED flag is {gshp_formatted}.\n\n")
 
         # Rule 002: Managed Care Override
         prov_37_desc = get_code_description('PROVIDER_TYPE', '37', descriptions)
         media_7_desc = get_code_description('MEDIA_CODE', '7', descriptions)
 
-        f.write(f"**Rule 002** - COS code `37` (Managed Care) is assigned when ")
+        f.write(f"**Rule 002** - Managed Care (37) is assigned when ")
         if prov_37_desc:
-            f.write(f"Provider Type is `37` ({prov_37_desc})")
+            f.write(f"Provider Type is {prov_37_desc} (`37`)")
         else:
             f.write(f"Provider Type is `37`")
 
         if media_7_desc:
-            f.write(f" OR Media Code is `7` ({media_7_desc}).\n\n")
+            f.write(f" OR Media Code is {media_7_desc} (`7`).\n\n")
         else:
             f.write(f" OR Media Code is `7`.\n\n")
 
         # Rule 003: Laboratory Override
         ct_03_desc = get_code_description('CLAIM_TYPE', '03', descriptions)
-        f.write(f"**Rule 003** - COS code `60` (Laboratory) is assigned when ")
-        f.write(f"Procedure Code follows lab format (first 4 characters numeric and last character alphabetic) ")
-        f.write(f"AND claim is NOT Claim Type `03`")
+        f.write(f"**Rule 003** - Laboratory (60) is assigned when ")
+        f.write(f"Procedure Code first 4 characters are numeric (`0000` through `9999`) ")
+        f.write(f"AND last character is alphabetic (U or M) ")
+        f.write(f"AND claim is NOT Claim Type ")
         if ct_03_desc:
-            f.write(f" ({ct_03_desc})")
+            f.write(f"{ct_03_desc} (`03`)")
+        else:
+            f.write(f"`03`")
         f.write(f" AND NOT Medicare Part A Outpatient Hospital Crossover (14/03).\n\n")
 
         # Document COSMATRX traversal
@@ -188,15 +191,17 @@ def generate_natural_language_rules(descriptions, output_file):
 
         # Rule 004: Fallback for Claim Type 18
         ct_18_desc = get_code_description('CLAIM_TYPE', '18', descriptions)
-        f.write(f"**Rule 004** - COS code `08C` (Other Clinic) is assigned when no COSMATRX match ")
-        f.write(f"is found AND Claim Type is `18`")
+        f.write(f"**Rule 004** - Other Clinic (08C) is assigned when no COSMATRX match ")
+        f.write(f"is found AND Claim Type is ")
         if ct_18_desc:
-            f.write(f" ({ct_18_desc})")
+            f.write(f"{ct_18_desc} (`18`)")
+        else:
+            f.write(f"`18`")
         f.write(f" OR Medicare Part B Independent Clinic Crossover (15/18).\n\n")
 
         # Rule 005: Fallback default
-        f.write(f"**Rule 005** - COS code `99` (Other) is assigned when no COSMATRX match is found ")
-        f.write(f"and the claim does not qualify for COS `08C`.\n\n")
+        f.write(f"**Rule 005** - Default/Other (99) is assigned when no COSMATRX match is found ")
+        f.write(f"and the claim does not qualify for Other Clinic (08C).\n\n")
 
         # Processing Flow
         f.write("---\n\n")
